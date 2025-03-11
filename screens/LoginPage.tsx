@@ -5,22 +5,72 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  CheckBox
+  Alert,
+  ActivityIndicator
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const LoginScreen = ({ navigation }: any) => {
+const LoginPage = ({ navigation }: any) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
-    if (email === "test@example.com" && password === "password123") {
-      alert("Connexion réussie !");
-      navigation.navigate("Home");
-    } else {
-      alert("Email ou mot de passe incorrect !");
+  const handleLogin = async () => {
+    console.log('Tentative de connexion avec :', email, password);
+
+    if (!email || !password) {
+      Alert.alert('Erreur', 'Veuillez entrer votre email et votre mot de passe.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      console.log('Envoi de la requête à /api/login...');
+      const response = await fetch('http://192.168.56.1:8000/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          use_email: email,
+          use_password: password
+        }),
+      });
+
+      console.log('Réponse reçue, statut HTTP:', response.status);
+
+      let data;
+      try {
+        data = await response.json();
+        console.log('Réponse JSON:', JSON.stringify(data, null, 2));
+      } catch (error) {
+        console.error('Erreur JSON:', error);
+        data = { message: 'Réponse non valide du serveur.' };
+      }
+
+      if (response.ok) {
+        console.log('Connexion réussie, token reçu:', data.token);
+
+        await AsyncStorage.setItem('token', data.token);
+        console.log("Token stocké avec succès !");
+
+        Alert.alert('Bienvenue', `Connexion réussie, ${email} !`);
+
+        console.log('Tentative de redirection vers HomePage...');
+        navigation.replace('TabNavigator');
+      } else {
+        console.log('Erreur de connexion:', data.message);
+        Alert.alert('Erreur', data.message || 'Email ou mot de passe incorrect.');
+      }
+    } catch (error) {
+      console.error('Erreur de connexion:', error);
+      Alert.alert('Erreur', 'Impossible de se connecter. Vérifiez votre connexion.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -33,9 +83,6 @@ const LoginScreen = ({ navigation }: any) => {
 
       <View style={styles.box}>
         <Text style={styles.title}>Bienvenue</Text>
-        <Text style={styles.subtitle}>
-          Vous n'avez pas de compte ? <Text style={styles.registerText}>Inscrivez-vous</Text>
-        </Text>
 
         <View style={styles.inputContainer}>
           <Ionicons name="mail-outline" size={20} color="#777" style={styles.icon} />
@@ -61,116 +108,53 @@ const LoginScreen = ({ navigation }: any) => {
           />
         </View>
 
-        <View style={styles.optionsContainer}>
-          <View style={styles.checkboxContainer}>
-            <CheckBox value={rememberMe} onValueChange={setRememberMe} />
-            <Text style={styles.checkboxText}>Se souvenir de moi</Text>
-          </View>
-          <TouchableOpacity>
-            <Text style={styles.forgotPassword}>Mot de passe oublié ?</Text>
-          </TouchableOpacity>
-        </View>
-
-        <TouchableOpacity style={styles.button} onPress={handleLogin}>
-          <Text style={styles.buttonText}>Se connecter</Text>
+        <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
+          {loading ? <ActivityIndicator color="white" /> : <Text style={styles.buttonText}>Se connecter</Text>}
         </TouchableOpacity>
       </View>
     </LinearGradient>
   );
 };
 
+// Styles
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logoContainer: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  logoText: {
-    color: 'white',
-    fontSize: 22,
-    fontWeight: 'bold',
-  },
+  container: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  logoContainer: { alignItems: 'center', marginBottom: 20 },
+  logoText: { color: 'white', fontSize: 22, fontWeight: 'bold' },
   box: {
     width: '85%',
     backgroundColor: '#fff',
     padding: 20,
     borderRadius: 20,
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOpacity: 0.2,
     shadowRadius: 5,
     shadowOffset: { width: 0, height: 3 },
     elevation: 6,
-    alignItems: 'center',
   },
-  title: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    color: '#fd5312',
-    marginBottom: 5,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#777',
-    marginBottom: 15,
-  },
-  registerText: {
-    color: '#fd5312',
-    fontWeight: 'bold',
-  },
+  title: { fontSize: 26, fontWeight: 'bold', color: '#fd5312', marginBottom: 10 },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f0f0f0',
     width: '100%',
     borderRadius: 10,
     paddingHorizontal: 10,
     marginBottom: 15,
+    height: 50,
   },
-  icon: {
-    marginRight: 10,
-  },
+  icon: { marginRight: 10, color: '#777' },
   input: {
     flex: 1,
-    height: 50,
     fontSize: 16,
     color: '#333',
+    paddingLeft: 10,
+    borderWidth: 0,
+    outlineStyle: 'none',
   },
-  optionsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginBottom: 15,
-  },
-  checkboxContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  checkboxText: {
-    marginLeft: 5,
-    color: '#777',
-  },
-  forgotPassword: {
-    color: '#fd5312',
-    fontSize: 14,
-  },
-  button: {
-    backgroundColor: '#fd5312',
-    paddingVertical: 12,
-    paddingHorizontal: 30,
-    borderRadius: 10,
-    width: '100%',
-    alignItems: 'center',
-    elevation: 3,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
+  button: { backgroundColor: '#fd5312', paddingVertical: 12, width: '100%', alignItems: 'center', borderRadius: 10, elevation: 3 },
+  buttonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
 });
 
-export default LoginScreen;
+export default LoginPage;
