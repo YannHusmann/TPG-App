@@ -18,8 +18,6 @@ const LoginPage = ({ navigation }: any) => {
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    console.log('Tentative de connexion avec :', email, password);
-
     if (!email || !password) {
       Alert.alert('Erreur', 'Veuillez entrer votre email et votre mot de passe.');
       return;
@@ -28,7 +26,6 @@ const LoginPage = ({ navigation }: any) => {
     setLoading(true);
 
     try {
-      console.log('Envoi de la requête à /api/login...');
       const response = await fetch('http://192.168.56.1:8000/api/login', {
         method: 'POST',
         headers: {
@@ -41,34 +38,17 @@ const LoginPage = ({ navigation }: any) => {
         }),
       });
 
-      console.log('Réponse reçue, statut HTTP:', response.status);
-
-      let data;
-      try {
-        data = await response.json();
-        console.log('Réponse JSON:', JSON.stringify(data, null, 2));
-      } catch (error) {
-        console.error('Erreur JSON:', error);
-        data = { message: 'Réponse non valide du serveur.' };
-      }
+      let data = await response.json();
 
       if (response.ok) {
-        console.log('Connexion réussie, token reçu:', data.token);
-
         await AsyncStorage.setItem('token', data.token);
-        console.log("Token stocké avec succès !");
-
         Alert.alert('Bienvenue', `Connexion réussie, ${email} !`);
-
-        console.log('Tentative de redirection vers HomePage...');
         navigation.replace('TabNavigator');
       } else {
-        console.log('Erreur de connexion:', data.message);
         Alert.alert('Erreur', data.message || 'Email ou mot de passe incorrect.');
       }
     } catch (error) {
-      console.error('Erreur de connexion:', error);
-      Alert.alert('Erreur', 'Impossible de se connecter. Vérifiez votre connexion.');
+      Alert.alert('Erreur', 'Impossible de se connecter.');
     } finally {
       setLoading(false);
     }
@@ -111,6 +91,12 @@ const LoginPage = ({ navigation }: any) => {
         <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
           {loading ? <ActivityIndicator color="white" /> : <Text style={styles.buttonText}>Se connecter</Text>}
         </TouchableOpacity>
+
+        {/* Bouton S'inscrire */}
+       <TouchableOpacity onPress={() => navigation.navigate('RegisterPage')}>
+         <Text style={styles.registerText}>Créer un compte</Text>
+       </TouchableOpacity>
+
       </View>
     </LinearGradient>
   );
@@ -121,40 +107,14 @@ const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   logoContainer: { alignItems: 'center', marginBottom: 20 },
   logoText: { color: 'white', fontSize: 22, fontWeight: 'bold' },
-  box: {
-    width: '85%',
-    backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 20,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 6,
-  },
+  box: { width: '85%', backgroundColor: '#fff', padding: 20, borderRadius: 20, alignItems: 'center' },
   title: { fontSize: 26, fontWeight: 'bold', color: '#fd5312', marginBottom: 10 },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f0f0f0',
-    width: '100%',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    marginBottom: 15,
-    height: 50,
-  },
+  inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f0f0f0', width: '100%', borderRadius: 10, paddingHorizontal: 10, marginBottom: 15, height: 50 },
   icon: { marginRight: 10, color: '#777' },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    color: '#333',
-    paddingLeft: 10,
-    borderWidth: 0,
-    outlineStyle: 'none',
-  },
-  button: { backgroundColor: '#fd5312', paddingVertical: 12, width: '100%', alignItems: 'center', borderRadius: 10, elevation: 3 },
+  input: { flex: 1, fontSize: 16, color: '#333' },
+  button: { backgroundColor: '#fd5312', paddingVertical: 12, width: '100%', alignItems: 'center', borderRadius: 10 },
   buttonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+  registerText: { marginTop: 10, color: '#fd5312', fontSize: 16 }
 });
 
 export default LoginPage;

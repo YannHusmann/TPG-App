@@ -4,6 +4,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import LoginPage from './screens/LoginPage';
 import TabNavigator from './navigation/TabNavigator';
+import RegisterPage from './screens/RegisterPage';
 import 'react-native-gesture-handler';
 import { ActivityIndicator, View } from 'react-native';
 
@@ -37,6 +38,7 @@ export default function App() {
       <Stack.Navigator initialRouteName={initialRoute}>
         <Stack.Screen name="LoginPage" component={LoginPage} options={{ headerShown: false }} />
         <Stack.Screen name="TabNavigator" component={TabNavigator} options={{ headerShown: false }} />
+        <Stack.Screen name="RegisterPage" component={RegisterPage} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   );
