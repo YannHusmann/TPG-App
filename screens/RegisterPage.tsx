@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { API_BASE_URL } from '../config';
+
 
 const RegisterPage = ({ navigation }) => {
   const [name, setName] = useState('');
@@ -8,7 +10,7 @@ const RegisterPage = ({ navigation }) => {
 
   const handleRegister = async () => {
     try {
-      const response = await fetch('http://192.168.56.1:8000/api/register', {
+      const response = await fetch(`${API_BASE_URL}/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -20,7 +22,7 @@ const RegisterPage = ({ navigation }) => {
 
       if (response.ok) {
         Alert.alert('Succès', 'Compte créé avec succès.');
-        navigation.replace('LoginPage'); // ✅ Redirige bien vers la page de connexion
+        navigation.replace('LoginPage');
       } else {
         Alert.alert('Erreur', data.message || 'Erreur lors de l’inscription.');
       }

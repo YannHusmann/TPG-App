@@ -1,6 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const API_BASE_URL = 'http://192.168.56.1:8000/api';
+import { API_BASE_URL } from '../config';
 
 async function getAuthHeader() {
   const token = await AsyncStorage.getItem('token');
@@ -58,6 +57,8 @@ export async function deleteReport(id: number) {
 
 export async function checkTokenValid() {
   const headers = await getAuthHeader();
+  console.log('→ Vérification token avec headers :', headers);
   const response = await fetch(`${API_BASE_URL}/me`, { headers });
+  console.log('→ Code réponse de /me :', response.status);
   return response.status === 200;
 }

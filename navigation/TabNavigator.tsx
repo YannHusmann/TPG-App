@@ -49,6 +49,7 @@ const AuthStack = () => (
 const MainTabs = ({ user, setUser, navigation }) => (
   <Tab.Navigator
     screenOptions={({ route }) => ({
+      headerShown: false, // désactive le header pour tous les onglets
       tabBarShowLabel: false,
       tabBarStyle: { height: 70 },
       tabBarButton: (props) => (
@@ -84,7 +85,7 @@ const AppNavigator = () => {
     checkAuth();
   }, []);
 
-  if (loading) return null; // Attendre l'authentification
+  if (loading) return null;
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>

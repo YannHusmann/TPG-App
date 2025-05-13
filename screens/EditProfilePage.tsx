@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL } from '../config';
 
-// ✅ Récupération correcte des paramètres via `route`
 const EditProfilePage = ({ route, navigation }) => {
-  const user = route?.params?.user || null;  // Vérification pour éviter undefined
+  const user = route?.params?.user || null;
   const [name, setName] = useState(user?.use_username || '');
   const [email, setEmail] = useState(user?.use_email || '');
   const [password, setPassword] = useState('');
@@ -20,7 +20,7 @@ const EditProfilePage = ({ route, navigation }) => {
         return;
       }
 
-      const response = await fetch('http://192.168.56.1:8000/api/user/update', {
+      const response = await fetch(`${API_BASE_URL}/user/update`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

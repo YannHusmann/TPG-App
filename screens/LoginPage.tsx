@@ -11,7 +11,8 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { login } from '../services/api'; // adapte ce chemin si nécessaire
+import { login } from '../services/api';
+import { API_BASE_URL } from '../config';
 
 const LoginPage = ({ navigation }: any) => {
   const [email, setEmail] = useState('');
