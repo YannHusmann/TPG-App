@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
-import { NavigationContainer } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { Animated, TouchableOpacity } from 'react-native';
@@ -16,7 +15,7 @@ import RegisterPage from '../screens/RegisterPage';
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
-// Animation des icônes d'onglet
+// Composant animé pour les onglets
 const TabButton = ({ onPress, iconName, isFocused }) => {
   const scaleAnim = useRef(new Animated.Value(isFocused ? 1.5 : 1)).current;
 
@@ -37,7 +36,7 @@ const TabButton = ({ onPress, iconName, isFocused }) => {
   );
 };
 
-// Auth Stack (Login & Register)
+// Stack pour login/register
 const AuthStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="LoginPage" component={LoginPage} />
@@ -45,32 +44,36 @@ const AuthStack = () => (
   </Stack.Navigator>
 );
 
-// Onglets principaux (Home & Profile)
-const MainTabs = ({ user, setUser, navigation }) => (
+// Tabs principaux (Accueil + Profil)
+const MainTabs = ({ user, setUser }) => (
   <Tab.Navigator
     screenOptions={({ route }) => ({
-      headerShown: false, // désactive le header pour tous les onglets
+      headerShown: false,
       tabBarShowLabel: false,
       tabBarStyle: { height: 70 },
       tabBarButton: (props) => (
         <TabButton
           {...props}
           iconName={route.name === 'Home' ? 'home' : 'person'}
-          isFocused={props.accessibilityState.selected}
+          isFocused={props.accessibilityState?.selected ?? false}
         />
       ),
     })}
   >
     <Tab.Screen name="Home">
-      {({ navigation }) => <HomePage navigation={navigation} setUser={setUser} user={user} />}
+      {({ navigation }) => (
+        <HomePage navigation={navigation} user={user} setUser={setUser} />
+      )}
     </Tab.Screen>
     <Tab.Screen name="Profile">
-      {({ navigation }) => <ProfilePage navigation={navigation} user={user} />}
+      {({ navigation }) => (
+        <ProfilePage navigation={navigation} user={user} />
+      )}
     </Tab.Screen>
   </Tab.Navigator>
 );
 
-// Stack Principal (MainTabs + EditProfilePage)
+// Stack principal (Tabs + Edit)
 const AppNavigator = () => {
   const [user, setUser] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -92,7 +95,7 @@ const AppNavigator = () => {
       {isLoggedIn ? (
         <>
           <Stack.Screen name="MainTabs">
-            {({ navigation }) => <MainTabs user={user} setUser={setUser} navigation={navigation} />}
+            {() => <MainTabs user={user} setUser={setUser} />}
           </Stack.Screen>
           <Stack.Screen name="EditProfile">
             {({ navigation }) => <EditProfilePage user={user} navigation={navigation} />}
