@@ -11,11 +11,11 @@ import ProfilePage from '../screens/ProfilePage';
 import EditProfilePage from '../screens/EditProfilePage';
 import LoginPage from '../screens/LoginPage';
 import RegisterPage from '../screens/RegisterPage';
+import ForgotPasswordPage from '../screens/ForgotPasswordPage';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
-// Composant animé pour les onglets
 const TabButton = ({ onPress, iconName, isFocused }) => {
   const scaleAnim = useRef(new Animated.Value(isFocused ? 1.5 : 1)).current;
 
@@ -36,15 +36,6 @@ const TabButton = ({ onPress, iconName, isFocused }) => {
   );
 };
 
-// Stack pour login/register
-const AuthStack = () => (
-  <Stack.Navigator screenOptions={{ headerShown: false }}>
-    <Stack.Screen name="LoginPage" component={LoginPage} />
-    <Stack.Screen name="RegisterPage" component={RegisterPage} />
-  </Stack.Navigator>
-);
-
-// Tabs principaux (Accueil + Profil)
 const MainTabs = ({ user, setUser }) => (
   <Tab.Navigator
     screenOptions={({ route }) => ({
@@ -73,7 +64,6 @@ const MainTabs = ({ user, setUser }) => (
   </Tab.Navigator>
 );
 
-// Stack principal (Tabs + Edit)
 const AppNavigator = () => {
   const [user, setUser] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -102,7 +92,11 @@ const AppNavigator = () => {
           </Stack.Screen>
         </>
       ) : (
-        <Stack.Screen name="AuthStack" component={AuthStack} />
+        <>
+          <Stack.Screen name="LoginPage" component={LoginPage} />
+          <Stack.Screen name="RegisterPage" component={RegisterPage} />
+          <Stack.Screen name="ForgotPasswordPage" component={ForgotPasswordPage} />
+        </>
       )}
     </Stack.Navigator>
   );
