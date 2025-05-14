@@ -8,6 +8,8 @@ import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { API_BASE_URL } from '../config';
 import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 
 const mapStyle = [
   { featureType: 'poi', stylers: [{ visibility: 'off' }] },
@@ -144,7 +146,8 @@ const HomePage = ({ navigation, setUser }) => {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+
       <View style={styles.header}>
         <Text style={styles.headerText}>Accueil</Text>
       </View>
@@ -238,7 +241,8 @@ const HomePage = ({ navigation, setUser }) => {
           />
         </>
       )}
-    </View>
+    </SafeAreaView>
+
   );
 };
 

@@ -8,6 +8,7 @@ import SplashScreen from './screens/SplashScreen';
 import LoginPage from './screens/LoginPage';
 import RegisterPage from './screens/RegisterPage';
 import TabNavigator from './navigation/TabNavigator';
+import ForgotPasswordPage from './screens/ForgotPasswordPage';
 
 enableScreens();
 const Stack = createStackNavigator();
@@ -21,6 +22,7 @@ export default function App() {
           <Stack.Screen name="LoginPage" component={LoginPage} />
           <Stack.Screen name="RegisterPage" component={RegisterPage} />
           <Stack.Screen name="TabNavigator" component={TabNavigator} />
+          <Stack.Screen name="ForgotPasswordPage" component={ForgotPasswordPage} />
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>

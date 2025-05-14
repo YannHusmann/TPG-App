@@ -1,23 +1,27 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL } from '../config';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { API_BASE_URL, API_BASE_URL_WITHOUT_API } from '../config';
 
 const ProfilePage = ({ user, navigation }) => {
+  const avatarUri = user?.use_avatar
+    ? `${API_BASE_URL_WITHOUT_API}${user.use_avatar}`
+    : require('../assets/images/default-avatar.png');
+
   const handleLogout = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
-
       if (token) {
         await fetch(`${API_BASE_URL}/logout`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json'
-          }
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
         });
       }
-
       await AsyncStorage.removeItem('token');
       navigation.replace('LoginPage');
     } catch (error) {
@@ -26,59 +30,119 @@ const ProfilePage = ({ user, navigation }) => {
     }
   };
 
+  const buttons = [
+    {
+      label: 'Mes signalements',
+      icon: 'list-circle-outline',
+      onPress: () => navigation.navigate('ReportsList'),
+    },
+    {
+      label: 'Modifier mon profil',
+      icon: 'person-outline',
+      onPress: () => navigation.navigate('EditProfile', { user }),
+    },
+    {
+      label: 'Mentions légales',
+      icon: 'document-text-outline',
+      onPress: () =>
+        navigation.navigate('WebViewPage', {
+          url: `${API_BASE_URL_WITHOUT_API}/mentions-legales`,
+          title: 'Mentions légales',
+        }),
+    },
+    {
+      label: 'Protection des données',
+      icon: 'shield-checkmark-outline',
+      onPress: () =>
+        navigation.navigate('WebViewPage', {
+          url: `${API_BASE_URL_WITHOUT_API}/protection-donnees`,
+          title: 'Protection des données',
+        }),
+    },
+  ];
+
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerText}>Mon Profil</Text>
+        <Text style={styles.headerText}>Profil</Text>
       </View>
 
-      <View style={styles.body}>
-        <View style={styles.infoContainer}>
-          <Text style={styles.label}>Nom :</Text>
-          <Text style={styles.info}>{user?.use_username || 'Non renseigné'}</Text>
-        </View>
-
-        <View style={styles.infoContainer}>
-          <Text style={styles.label}>Email :</Text>
-          <Text style={styles.info}>{user?.use_email || 'Non renseigné'}</Text>
-        </View>
-
-        <TouchableOpacity style={styles.actionButton} onPress={() => {}}>
-          <Text style={styles.actionButtonText}>Voir mes signalements</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.editButton}
-          onPress={() => navigation.navigate('EditProfile', { user })}
-        >
-          <Text style={styles.editButtonText}>Modifier mes infos</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.logoutButton}
-          onPress={handleLogout}
-        >
-          <Text style={styles.logoutButtonText}>Se déconnecter</Text>
-        </TouchableOpacity>
+      <View style={styles.avatarContainer}>
+        <Image
+          source={typeof avatarUri === 'string' ? { uri: avatarUri } : avatarUri}
+          style={styles.avatar}
+        />
+        <Text style={styles.username}>{user?.use_username}</Text>
+        <Text style={styles.email}>{user?.use_email}</Text>
       </View>
-    </View>
+
+      <View style={styles.buttonsContainer}>
+        {buttons.map((btn, index) => (
+          <TouchableOpacity key={index} style={styles.button} onPress={btn.onPress}>
+            <Ionicons name={btn.icon} size={22} color="#fd5312" style={styles.icon} />
+            <Text style={styles.buttonText}>{btn.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <Ionicons name="log-out-outline" size={20} color="#888" style={styles.icon} />
+        <Text style={styles.logoutText}>Se déconnecter</Text>
+      </TouchableOpacity>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
-  header: { backgroundColor: '#fd5312', width: '100%', padding: 15, alignItems: 'center' },
-  headerText: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
-  body: { padding: 20, alignItems: 'center' },
-  infoContainer: { width: '100%', marginBottom: 15, padding: 10, borderBottomWidth: 1, borderBottomColor: '#ddd' },
-  label: { fontWeight: 'bold', fontSize: 16, color: '#444' },
-  info: { fontSize: 16, color: '#222' },
-  actionButton: { marginTop: 20, padding: 10, backgroundColor: '#fd5312', borderRadius: 10 },
-  actionButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-  editButton: { marginTop: 10, padding: 10, backgroundColor: '#ffa940', borderRadius: 10 },
-  editButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-  logoutButton: { marginTop: 10, padding: 10, backgroundColor: '#aaa', borderRadius: 10 },
-  logoutButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  header: {
+    backgroundColor: '#fd5312',
+    padding: 15,
+    alignItems: 'center',
+  },
+  headerText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  avatarContainer: {
+    alignItems: 'center',
+    paddingVertical: 30,
+    backgroundColor: '#fff',
+  },
+  avatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    marginBottom: 10,
+  },
+  username: { fontSize: 20, fontWeight: 'bold', color: '#222' },
+  email: { fontSize: 14, color: '#666' },
+  buttonsContainer: {
+    marginTop: 20,
+    paddingHorizontal: 20,
+  },
+  button: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  icon: { marginRight: 12 },
+  buttonText: { fontSize: 16, color: '#333' },
+  logoutButton: {
+    marginTop: 'auto',
+    marginBottom: 30,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoutText: {
+    color: '#888',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 });
 
 export default ProfilePage;

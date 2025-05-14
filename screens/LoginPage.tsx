@@ -8,14 +8,15 @@ import {
   Alert,
   ActivityIndicator,
   Keyboard,
-  TouchableWithoutFeedback
+  TouchableWithoutFeedback,
+  Platform
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { login } from '../services/api';
 
-const LoginPage = ({ navigation }: any) => {
+const LoginPage = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -105,6 +106,11 @@ const LoginPage = ({ navigation }: any) => {
             <Text style={styles.registerText}>Créer un compte</Text>
           </TouchableOpacity>
         </View>
+
+        <Text style={styles.disclaimer}>
+          TPG Signal est une application expérimentale réalisée dans le cadre d’un projet
+          d’études à la HEG de Genève. Elle n’est pas liée aux TPG officiels.
+        </Text>
       </LinearGradient>
     </TouchableWithoutFeedback>
   );
@@ -149,7 +155,15 @@ const styles = StyleSheet.create({
     borderRadius: 10
   },
   buttonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
-  registerText: { marginTop: 10, color: '#fd5312', fontSize: 16 }
+  registerText: { marginTop: 10, color: '#fd5312', fontSize: 16 },
+  disclaimer: {
+    fontSize: 12,
+    color: 'white',
+    textAlign: 'center',
+    paddingHorizontal: 30,
+    marginTop: 20,
+    marginBottom: Platform.OS === 'ios' ? 30 : 10
+  }
 });
 
 export default LoginPage;
