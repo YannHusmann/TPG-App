@@ -3,7 +3,6 @@ import {
   View,
   TouchableOpacity,
   Animated,
-  Dimensions,
   StyleSheet,
 } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -100,6 +99,8 @@ const BubbleTabBar = ({ state, descriptors, navigation }) => {
   );
 };
 
+const selectedStopRef = React.createRef(null);
+
 const MainTabs = ({ user, setUser }) => (
   <Tab.Navigator
     tabBar={(props) => <BubbleTabBar {...props} />}
@@ -107,16 +108,14 @@ const MainTabs = ({ user, setUser }) => (
   >
     <Tab.Screen name="Home">
       {({ navigation }) => (
-        <HomePage navigation={navigation} user={user} setUser={setUser} />
+        <HomePage navigation={navigation} user={user} setUser={setUser} selectedStopRef={selectedStopRef} />
       )}
     </Tab.Screen>
-
-    <Tab.Screen name="Report" component={ReportPage} />
-
+    <Tab.Screen name="Report">
+      {() => <ReportPage selectedStopRef={selectedStopRef} />}
+    </Tab.Screen>
     <Tab.Screen name="Profile">
-      {({ navigation }) => (
-        <ProfilePage navigation={navigation} user={user} />
-      )}
+      {({ navigation }) => <ProfilePage navigation={navigation} user={user} />}
     </Tab.Screen>
   </Tab.Navigator>
 );
@@ -191,14 +190,13 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fd5312', // même couleur que les autres
+    backgroundColor: '#fd5312',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 5,
   },
-
   centerButton: {
     top: -12,
     zIndex: 10,

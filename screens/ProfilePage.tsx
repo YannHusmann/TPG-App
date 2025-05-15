@@ -34,7 +34,7 @@ const ProfilePage = ({ user, navigation }) => {
     {
       label: 'Mes signalements',
       icon: 'list-circle-outline',
-      onPress: () => navigation.navigate('ReportsList'),
+      onPress: () => navigation.navigate('ReportsListPage'),
     },
     {
       label: 'Modifier mon profil',

@@ -131,7 +131,7 @@ const HomePage = ({ navigation, setUser }) => {
       </View>
       <TouchableOpacity
         style={styles.reportButton}
-        onPress={() => Alert.alert('Signalement', `Signalement pour ${item.sto_name}`)}>
+        onPress={() => navigation.navigate('ReportPage', { selectedStopId: item.sto_id })}>
         <Text style={styles.reportButtonText}>Signaler un dégât</Text>
       </TouchableOpacity>
     </View>

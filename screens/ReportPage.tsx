@@ -14,38 +14,29 @@ import DropDownPicker from 'react-native-dropdown-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { API_BASE_URL } from '../config';
+import { useRoute } from '@react-navigation/native';
 
 const ReportPage = () => {
-  const [activeTab, setActiveTab] = useState<'arret' | 'ligne'>('arret');
+  const route = useRoute();
+  const preselectedStopId = route.params?.selectedStopId ?? null;
 
-  useEffect(() => {
-    setSelectedStop(null);
-    setSelectedRoute(null);
-    setType(null);
-    setMessage('');
-    setOpenStop(false);
-    setOpenRoute(false);
-    setOpenType(false);
-  }, [activeTab]);
-
+  const [activeTab, setActiveTab] = useState<'arret' | 'ligne'>(preselectedStopId ? 'arret' : 'ligne');
 
   const [message, setMessage] = useState('');
   const [type, setType] = useState(null);
-
   const [typeOptions, setTypeOptions] = useState([]);
   const [routesOptions, setRoutesOptions] = useState([]);
   const [stopsOptions, setStopsOptions] = useState([]);
-
-  const [selectedStop, setSelectedStop] = useState(null);
+  const [selectedStop, setSelectedStop] = useState(preselectedStopId);
   const [selectedRoute, setSelectedRoute] = useState(null);
 
   const [openStop, setOpenStop] = useState(false);
   const [openRoute, setOpenRoute] = useState(false);
   const [openType, setOpenType] = useState(false);
 
-  const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [location, setLocation] = useState(null);
 
-  const handleOpen = (target: 'stop' | 'route' | 'type') => {
+  const handleOpen = (target) => {
     setOpenStop(target === 'stop');
     setOpenRoute(target === 'route');
     setOpenType(target === 'type');
@@ -56,15 +47,9 @@ const ReportPage = () => {
       const token = await AsyncStorage.getItem('token');
 
       const [stopsRes, routesRes, typesRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/stops/all`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch(`${API_BASE_URL}/routes/all`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch(`${API_BASE_URL}/reports/types`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
+        fetch(`${API_BASE_URL}/stops/all`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_BASE_URL}/routes/all`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_BASE_URL}/reports/types`, { headers: { Authorization: `Bearer ${token}` } }),
       ]);
 
       const stopsData = await stopsRes.json();
@@ -74,50 +59,41 @@ const ReportPage = () => {
       setStopsOptions(
         stopsData.data
           .sort((a, b) => a.sto_name.localeCompare(b.sto_name, 'fr', { numeric: true }))
-          .map((stop) => ({
-            label: stop.sto_name,
-            value: stop.sto_id,
-          }))
+          .map((stop) => ({ label: stop.sto_name, value: stop.sto_id }))
       );
 
       setRoutesOptions(
         routesData.data
           .sort((a, b) => a.rou_code.localeCompare(b.rou_code, 'fr', { numeric: true }))
-          .map((route) => ({
-            label: route.rou_code,
-            value: route.rou_id,
-          }))
+          .map((route) => ({ label: route.rou_code, value: route.rou_id }))
       );
 
-      setTypeOptions(
-        typesData.data.map((item) => ({
-          label: item,
-          value: item,
-        }))
-      );
+      setTypeOptions(typesData.data.map((item) => ({ label: item, value: item })));
     };
 
     const getLocation = async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        console.warn('Permission localisation refusée');
-        return;
-      }
-
+      if (status !== 'granted') return;
       const loc = await Location.getCurrentPositionAsync({});
-      setLocation({
-        latitude: loc.coords.latitude,
-        longitude: loc.coords.longitude,
-      });
+      setLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
     };
 
     fetchData();
     getLocation();
   }, []);
 
+  useEffect(() => {
+    if (!preselectedStopId) setSelectedStop(null);
+    setSelectedRoute(null);
+    setType(null);
+    setMessage('');
+    setOpenStop(false);
+    setOpenRoute(false);
+    setOpenType(false);
+  }, [activeTab]);
+
   const handleSubmit = async () => {
     const token = await AsyncStorage.getItem('token');
-
     const body = {
       rep_sto_id: activeTab === 'arret' ? selectedStop : null,
       rep_rou_id: activeTab === 'ligne' ? selectedRoute : null,
@@ -143,21 +119,14 @@ const ReportPage = () => {
       setMessage('');
       setType(null);
       setSelectedRoute(null);
-      setSelectedStop(null);
+      setSelectedStop(preselectedStopId ?? null);
     } else {
       Alert.alert('Erreur', data.message || 'Une erreur est survenue.');
     }
   };
 
   return (
-    <TouchableWithoutFeedback
-      onPress={() => {
-        Keyboard.dismiss();
-        setOpenStop(false);
-        setOpenRoute(false);
-        setOpenType(false);
-      }}
-    >
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.headerText}>Créer un signalement</Text>
@@ -187,9 +156,9 @@ const ReportPage = () => {
               setOpen={(val) => handleOpen(val ? 'stop' : '')}
               setValue={setSelectedStop}
               setItems={setStopsOptions}
-              placeholder="Rechercher un arrêt"
               searchable
               listMode="SCROLLVIEW"
+              placeholder="Rechercher un arrêt"
               style={styles.dropdown}
               dropDownContainerStyle={styles.dropdownList}
               onSelectItem={() => setOpenStop(false)}
@@ -205,9 +174,9 @@ const ReportPage = () => {
               setOpen={(val) => handleOpen(val ? 'route' : '')}
               setValue={setSelectedRoute}
               setItems={setRoutesOptions}
-              placeholder="Rechercher une ligne"
               searchable
               listMode="SCROLLVIEW"
+              placeholder="Rechercher une ligne"
               style={styles.dropdown}
               dropDownContainerStyle={styles.dropdownList}
               onSelectItem={() => setOpenRoute(false)}
@@ -222,9 +191,9 @@ const ReportPage = () => {
             setOpen={(val) => handleOpen(val ? 'type' : '')}
             setValue={setType}
             setItems={setTypeOptions}
-            placeholder="Type de dégât"
-            searchable
             listMode="SCROLLVIEW"
+            placeholder="Type de dégât"
+            searchable={false}
             style={styles.dropdown}
             dropDownContainerStyle={styles.dropdownList}
             onSelectItem={() => setOpenType(false)}
