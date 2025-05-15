@@ -18,16 +18,18 @@ import WebViewPage from '../screens/WebViewPage';
 import LoginPage from '../screens/LoginPage';
 import RegisterPage from '../screens/RegisterPage';
 import ForgotPasswordPage from '../screens/ForgotPasswordPage';
+import ReportPage from '../screens/ReportPage';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
 const TABS = [
   { name: 'Home', icon: 'home' },
+  { name: 'Report', icon: 'warning' },
   { name: 'Profile', icon: 'person' },
 ];
 
-const TabButton = ({ onPress, iconName, isFocused }) => {
+const TabButton = ({ onPress, iconName, isFocused, isCenter }) => {
   const scale = useRef(new Animated.Value(isFocused ? 1.2 : 1)).current;
 
   useEffect(() => {
@@ -40,22 +42,25 @@ const TabButton = ({ onPress, iconName, isFocused }) => {
   return (
     <TouchableOpacity
       onPress={onPress}
-      style={styles.tabButton}
-      activeOpacity={0.7}
+      style={[styles.tabButton, isCenter && styles.centerButton]}
+      activeOpacity={0.8}
     >
       <Animated.View
         style={[
           styles.iconWrapper,
+          isCenter && styles.iconCenterWrapper,
           {
             transform: [{ scale }],
-            backgroundColor: isFocused ? '#fd5312' : 'transparent',
+            backgroundColor: isFocused ? '#fd5312' : 'white',
+            borderWidth: isCenter ? 2 : 0,
+            borderColor: isCenter && isFocused ? '#fd5312' : 'transparent',
           },
         ]}
       >
         <Ionicons
           name={iconName}
-          size={22}
-          color={isFocused ? 'white' : '#888'}
+          size={isCenter ? 30 : 22}
+          color={isFocused ? '#fff' : '#fd5312'}
         />
       </Animated.View>
     </TouchableOpacity>
@@ -63,31 +68,12 @@ const TabButton = ({ onPress, iconName, isFocused }) => {
 };
 
 const BubbleTabBar = ({ state, descriptors, navigation }) => {
-  const translateX = useRef(new Animated.Value(0)).current;
-  const tabWidth = Dimensions.get('window').width / state.routes.length;
-
-  useEffect(() => {
-    Animated.spring(translateX, {
-      toValue: state.index * tabWidth,
-      useNativeDriver: true,
-    }).start();
-  }, [state.index]);
-
   return (
     <View style={styles.tabBarContainer}>
-      <Animated.View
-        style={[
-          styles.bubble,
-          {
-            transform: [{ translateX }],
-            width: tabWidth - 16,
-            marginHorizontal: 8,
-          },
-        ]}
-      />
       {state.routes.map((route, index) => {
         const label = TABS[index].icon;
         const isFocused = state.index === index;
+        const isCenter = route.name === 'Report';
 
         const onPress = () => {
           const event = navigation.emit({
@@ -106,6 +92,7 @@ const BubbleTabBar = ({ state, descriptors, navigation }) => {
             onPress={onPress}
             iconName={label}
             isFocused={isFocused}
+            isCenter={isCenter}
           />
         );
       })}
@@ -123,6 +110,9 @@ const MainTabs = ({ user, setUser }) => (
         <HomePage navigation={navigation} user={user} setUser={setUser} />
       )}
     </Tab.Screen>
+
+    <Tab.Screen name="Report" component={ReportPage} />
+
     <Tab.Screen name="Profile">
       {({ navigation }) => (
         <ProfilePage navigation={navigation} user={user} />
@@ -177,31 +167,44 @@ const AppNavigator = () => {
 const styles = StyleSheet.create({
   tabBarContainer: {
     flexDirection: 'row',
-    height: 56,
+    height: 64,
     backgroundColor: '#fff',
-    elevation: 8,
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingHorizontal: 10,
   },
   tabButton: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    flex: 1,
   },
   iconWrapper: {
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 999,
+    padding: 8,
+    borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: -40,
   },
+  iconCenterWrapper: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fd5312', // même couleur que les autres
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+
+  centerButton: {
+    top: -12,
+    zIndex: 10,
+  },
   bubble: {
-    position: 'absolute',
-    height: 40,
-    backgroundColor: '#fd5312',
-    borderRadius: 20,
-    top: 8,
-    left: 0,
-    zIndex: -1,
+    display: 'none',
   },
 });
 
