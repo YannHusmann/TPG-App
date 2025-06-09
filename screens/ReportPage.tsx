@@ -8,20 +8,23 @@ import {
   Alert,
   Keyboard,
   TouchableWithoutFeedback,
+  Image,
+  ScrollView
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DropDownPicker from 'react-native-dropdown-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
+import * as ImagePicker from 'expo-image-picker';
+import { useFocusEffect, useRoute } from '@react-navigation/native';
 import { API_BASE_URL } from '../config';
-import { useRoute } from '@react-navigation/native';
+import * as FileSystem from 'expo-file-system';
 
 const ReportPage = () => {
   const route = useRoute();
   const preselectedStopId = route.params?.selectedStopId ?? null;
 
   const [activeTab, setActiveTab] = useState<'arret' | 'ligne'>(preselectedStopId ? 'arret' : 'ligne');
-
   const [message, setMessage] = useState('');
   const [type, setType] = useState(null);
   const [typeOptions, setTypeOptions] = useState([]);
@@ -29,12 +32,11 @@ const ReportPage = () => {
   const [stopsOptions, setStopsOptions] = useState([]);
   const [selectedStop, setSelectedStop] = useState(preselectedStopId);
   const [selectedRoute, setSelectedRoute] = useState(null);
-
   const [openStop, setOpenStop] = useState(false);
   const [openRoute, setOpenRoute] = useState(false);
   const [openType, setOpenType] = useState(false);
-
   const [location, setLocation] = useState(null);
+  const [images, setImages] = useState([]);
 
   const handleOpen = (target) => {
     setOpenStop(target === 'stop');
@@ -92,37 +94,93 @@ const ReportPage = () => {
     setOpenType(false);
   }, [activeTab]);
 
+  useFocusEffect(
+    React.useCallback(() => {
+      return () => setImages([]);
+    }, [])
+  );
+
   const handleSubmit = async () => {
     const token = await AsyncStorage.getItem('token');
-    const body = {
-      rep_sto_id: activeTab === 'arret' ? selectedStop : null,
-      rep_rou_id: activeTab === 'ligne' ? selectedRoute : null,
-      rep_type: type,
-      rep_message: message,
-      latitude: location?.latitude ?? null,
-      longitude: location?.longitude ?? null,
-    };
 
-    const response = await fetch(`${API_BASE_URL}/reports`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
+    const formData = new FormData();
+    formData.append('rep_sto_id', activeTab === 'arret' ? selectedStop ?? '' : '');
+    formData.append('rep_rou_id', activeTab === 'ligne' ? selectedRoute ?? '' : '');
+    formData.append('rep_type', type ?? '');
+    formData.append('rep_message', message);
+    formData.append('latitude', location?.latitude ?? '');
+    formData.append('longitude', location?.longitude ?? '');
+
+    images.forEach((image, index) => {
+      formData.append(`images[${index}]`, {
+        uri: image.uri,
+        name: `photo${index}.jpg`,
+        type: 'image/jpeg',
+      });
     });
 
-    const data = await response.json();
+    try {
+      const response = await fetch(`${API_BASE_URL}/reports`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          // NE PAS définir Content-Type ici pour FormData
+        },
+        body: formData,
+      });
 
-    if (response.ok) {
-      Alert.alert('Succès', 'Le signalement a été envoyé.');
-      setMessage('');
-      setType(null);
-      setSelectedRoute(null);
-      setSelectedStop(preselectedStopId ?? null);
-    } else {
-      Alert.alert('Erreur', data.message || 'Une erreur est survenue.');
+      const data = await response.json();
+
+      if (response.ok) {
+        Alert.alert('Succès', 'Le signalement a été envoyé.');
+        setMessage('');
+        setType(null);
+        setSelectedRoute(null);
+        setSelectedStop(preselectedStopId ?? null);
+        setImages([]);
+      } else {
+        console.log('Erreur API :', data);
+        Alert.alert('Erreur', data.message || 'Une erreur est survenue.');
+      }
+    } catch (error) {
+      console.error('Erreur réseau :', error);
+      Alert.alert('Erreur', 'Impossible d’envoyer le signalement.');
     }
+  };
+
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission refusée', 'L\'accès à la galerie est requis.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      quality: 0.6,
+    });
+
+    if (!result.canceled) {
+      const processedImages = await Promise.all(
+        result.assets.map(async (asset) => {
+          // Copie dans un fichier temporaire
+          const fileUri = `${FileSystem.cacheDirectory}${asset.fileName || `image_${Date.now()}.jpg`}`;
+          await FileSystem.copyAsync({
+            from: asset.uri,
+            to: fileUri,
+          });
+
+          return { uri: fileUri };
+        })
+      );
+
+      setImages((prev) => [...prev, ...processedImages]);
+    }
+  };
+
+  const removeImage = (uriToRemove) => {
+    setImages(images.filter((img) => img.uri !== uriToRemove));
   };
 
   return (
@@ -133,21 +191,15 @@ const ReportPage = () => {
         </View>
 
         <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'arret' && styles.activeTab]}
-            onPress={() => setActiveTab('arret')}
-          >
+          <TouchableOpacity style={[styles.tab, activeTab === 'arret' && styles.activeTab]} onPress={() => setActiveTab('arret')}>
             <Text style={[styles.tabText, activeTab === 'arret' && styles.activeTabText]}>Arrêts</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'ligne' && styles.activeTab]}
-            onPress={() => setActiveTab('ligne')}
-          >
+          <TouchableOpacity style={[styles.tab, activeTab === 'ligne' && styles.activeTab]} onPress={() => setActiveTab('ligne')}>
             <Text style={[styles.tabText, activeTab === 'ligne' && styles.activeTabText]}>Lignes</Text>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.form}>
+        <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
           {activeTab === 'arret' && (
             <DropDownPicker
               open={openStop}
@@ -208,10 +260,25 @@ const ReportPage = () => {
             multiline
           />
 
+          <View style={styles.imagesContainer}>
+            {images.map((img, idx) => (
+              <View key={idx} style={styles.imageWrapper}>
+                <Image source={{ uri: img.uri }} style={styles.imagePreview} />
+                <TouchableOpacity style={styles.removeBtn} onPress={() => removeImage(img.uri)}>
+                  <Text style={styles.removeText}>−</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+
+          <TouchableOpacity style={styles.addImageBtn} onPress={pickImage}>
+            <Text style={styles.addImageText}>Ajouter des photos</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
             <Text style={styles.submitText}>Envoyer le signalement</Text>
           </TouchableOpacity>
-        </View>
+        </ScrollView>
       </SafeAreaView>
     </TouchableWithoutFeedback>
   );
@@ -240,7 +307,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   activeTabText: { color: '#fff' },
-  form: { paddingHorizontal: 20, zIndex: 1000 },
+  form: { paddingHorizontal: 20, paddingBottom: 40 },
   dropdown: { marginBottom: 15, borderRadius: 10 },
   dropdownList: { borderRadius: 10 },
   input: {
@@ -254,12 +321,49 @@ const styles = StyleSheet.create({
     height: 100,
     textAlignVertical: 'top',
   },
+  addImageBtn: {
+    backgroundColor: '#eee',
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  addImageText: {
+    color: '#555',
+    fontWeight: 'bold',
+  },
+  imagesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 15,
+  },
+  imageWrapper: {
+    position: 'relative',
+  },
+  imagePreview: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+  },
+  removeBtn: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    backgroundColor: '#fd5312',
+    borderRadius: 999,
+    padding: 4,
+  },
+  removeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
   submitButton: {
     backgroundColor: '#fd5312',
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
-    marginTop: 10,
   },
   submitText: {
     color: '#fff',

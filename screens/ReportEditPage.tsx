@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, TextInput, StyleSheet, TouchableOpacity,
-  ActivityIndicator, Alert, Keyboard, TouchableWithoutFeedback,
+  ActivityIndicator, Alert, Keyboard, TouchableWithoutFeedback, Image, ScrollView
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DropDownPicker from 'react-native-dropdown-picker';
+import * as ImagePicker from 'expo-image-picker';
 import { API_BASE_URL } from '../config';
 
 const ReportEditPage = ({ route, navigation }) => {
@@ -14,22 +15,19 @@ const ReportEditPage = ({ route, navigation }) => {
   const [message, setMessage] = useState('');
   const [type, setType] = useState(null);
   const [typeOptions, setTypeOptions] = useState([]);
-
   const [selectedStop, setSelectedStop] = useState(null);
   const [selectedRoute, setSelectedRoute] = useState(null);
   const [stopsOptions, setStopsOptions] = useState([]);
   const [routesOptions, setRoutesOptions] = useState([]);
-
   const [openType, setOpenType] = useState(false);
   const [openStop, setOpenStop] = useState(false);
   const [openRoute, setOpenRoute] = useState(false);
-
-  const [activeTab, setActiveTab] = useState<'arret' | 'ligne'>('arret');
-
+  const [activeTab, setActiveTab] = useState('arret');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [images, setImages] = useState([]);
 
-  const handleOpen = (target: 'type' | 'stop' | 'route') => {
+  const handleOpen = (target) => {
     setOpenType(target === 'type');
     setOpenStop(target === 'stop');
     setOpenRoute(target === 'route');
@@ -39,7 +37,6 @@ const ReportEditPage = ({ route, navigation }) => {
     const fetchData = async () => {
       try {
         const token = await AsyncStorage.getItem('token');
-
         const res = await fetch(`${API_BASE_URL}/reports/${reportId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -51,6 +48,7 @@ const ReportEditPage = ({ route, navigation }) => {
         setSelectedStop(data.data.rep_sto_id);
         setSelectedRoute(data.data.rep_rou_id);
         setActiveTab(data.data.rep_sto_id ? 'arret' : 'ligne');
+        setImages(data.data.images.map(img => ({ id: img.id, uri: img.url })));
 
         const [typesRes, stopsRes, routesRes] = await Promise.all([
           fetch(`${API_BASE_URL}/reports/types`, { headers: { Authorization: `Bearer ${token}` } }),
@@ -65,21 +63,11 @@ const ReportEditPage = ({ route, navigation }) => {
         if (typesRes.ok) {
           setTypeOptions(typesData.data.map(t => ({ label: t, value: t })));
         }
-
         if (stopsRes.ok) {
-          setStopsOptions(
-            stopsData.data
-              .sort((a, b) => a.sto_name.localeCompare(b.sto_name, 'fr', { numeric: true }))
-              .map((stop) => ({ label: stop.sto_name, value: stop.sto_id }))
-          );
+          setStopsOptions(stopsData.data.sort((a, b) => a.sto_name.localeCompare(b.sto_name, 'fr', { numeric: true })).map(stop => ({ label: stop.sto_name, value: stop.sto_id })));
         }
-
         if (routesRes.ok) {
-          setRoutesOptions(
-            routesData.data
-              .sort((a, b) => a.rou_code.localeCompare(b.rou_code, 'fr', { numeric: true }))
-              .map((route) => ({ label: route.rou_code, value: route.rou_id }))
-          );
+          setRoutesOptions(routesData.data.sort((a, b) => a.rou_code.localeCompare(b.rou_code, 'fr', { numeric: true })).map(route => ({ label: route.rou_code, value: route.rou_id })));
         }
 
         setLoading(false);
@@ -93,37 +81,68 @@ const ReportEditPage = ({ route, navigation }) => {
     fetchData();
   }, []);
 
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission refusée', 'L\'accès à la galerie est requis.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.6,
+    });
+    if (!result.canceled) {
+      const photo = result.assets[0];
+      setImages([...images, { uri: photo.uri }]);
+    }
+  };
+
+  const removeImage = (uriToRemove) => {
+    setImages(images.filter((img) => img.uri !== uriToRemove));
+  };
+
   const handleSubmit = async () => {
     setSaving(true);
     try {
       const token = await AsyncStorage.getItem('token');
+      const formData = new FormData();
+      formData.append('rep_message', message);
+      formData.append('rep_type', type);
+      formData.append('rep_sto_id', activeTab === 'arret' ? selectedStop : '');
+      formData.append('rep_rou_id', activeTab === 'ligne' ? selectedRoute : '');
+      formData.append('_method', 'PUT');
 
-      const body = {
-        rep_message: message,
-        rep_type: type,
-        rep_sto_id: activeTab === 'arret' ? selectedStop : null,
-        rep_rou_id: activeTab === 'ligne' ? selectedRoute : null,
-      };
+      images.forEach((img, index) => {
+        if (img.id) {
+          formData.append('existing_images[]', img.uri);
+        } else {
+          formData.append('images[]', {
+            uri: img.uri,
+            name: `photo${index}.jpg`,
+            type: 'image/jpeg',
+          });
+        }
+      });
 
       const res = await fetch(`${API_BASE_URL}/reports/${reportId}`, {
-        method: 'PUT',
+        method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          'Content-Type': 'multipart/form-data',
         },
-        body: JSON.stringify(body),
+        body: formData,
       });
 
       const data = await res.json();
-
       if (res.ok) {
         Alert.alert('Succès', 'Signalement modifié.');
-        navigation.goBack();
+        navigation.goBack(); // ← ou navigation.navigate('ReportsListPage', { refresh: true });
       } else {
         Alert.alert('Erreur', data.message || 'Erreur lors de la modification.');
       }
     } catch (err) {
       Alert.alert('Erreur', 'Échec de la modification.');
+      console.error('Erreur soumission :', err);
     } finally {
       setSaving(false);
     }
@@ -147,21 +166,13 @@ const ReportEditPage = ({ route, navigation }) => {
         <Text style={styles.title}>Modifier le signalement</Text>
 
         <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'arret' && styles.activeTab]}
-            disabled={true}
-          >
+          <TouchableOpacity style={[styles.tab, activeTab === 'arret' && styles.activeTab]} disabled={true}>
             <Text style={[styles.tabText, activeTab === 'arret' && styles.activeTabText]}>Arrêts</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'ligne' && styles.activeTab]}
-            disabled={true}
-          >
+          <TouchableOpacity style={[styles.tab, activeTab === 'ligne' && styles.activeTab]} disabled={true}>
             <Text style={[styles.tabText, activeTab === 'ligne' && styles.activeTabText]}>Lignes</Text>
           </TouchableOpacity>
         </View>
-
-
 
         {activeTab === 'arret' && (
           <DropDownPicker
@@ -219,6 +230,31 @@ const ReportEditPage = ({ route, navigation }) => {
           multiline
         />
 
+        <ScrollView horizontal style={{ marginBottom: 15 }}>
+          {images.map((img, idx) => (
+            <View key={idx} style={{ position: 'relative', marginRight: 10 }}>
+              <Image source={{ uri: img.uri }} style={{ width: 80, height: 80, borderRadius: 8 }} />
+              <TouchableOpacity
+                style={{
+                  position: 'absolute',
+                  top: -6,
+                  right: -6,
+                  backgroundColor: '#fd5312',
+                  borderRadius: 999,
+                  padding: 4,
+                }}
+                onPress={() => removeImage(img.uri)}
+              >
+                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>−</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+        </ScrollView>
+
+        <TouchableOpacity style={styles.submitButton} onPress={pickImage}>
+          <Text style={styles.submitText}>Ajouter une photo</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} disabled={saving}>
           {saving
             ? <ActivityIndicator color="white" />
@@ -242,7 +278,7 @@ const styles = StyleSheet.create({
   dropdownList: { borderRadius: 10 },
   submitButton: {
     backgroundColor: '#fd5312', paddingVertical: 14,
-    borderRadius: 10, alignItems: 'center',
+    borderRadius: 10, alignItems: 'center', marginBottom: 10,
   },
   submitText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   backButton: { marginBottom: 10 },

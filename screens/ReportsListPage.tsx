@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,32 +6,46 @@ import {
   FlatList,
   TouchableOpacity,
   Alert,
+  Image,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 import { API_BASE_URL } from '../config';
 import { Ionicons } from '@expo/vector-icons';
+import ImageViewing from 'react-native-image-viewing';
 
 const ReportsListPage = ({ navigation }) => {
   const [reports, setReports] = useState([]);
   const [statusFilter, setStatusFilter] = useState(null);
+  const [viewerVisible, setViewerVisible] = useState(false);
+  const [viewerImages, setViewerImages] = useState([]);
+  const [viewerIndex, setViewerIndex] = useState(0);
 
   const fetchReports = async () => {
-    const token = await AsyncStorage.getItem('token');
-    const params = new URLSearchParams();
-    if (statusFilter) params.append('status', statusFilter);
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const params = new URLSearchParams();
+      if (statusFilter) params.append('status', statusFilter);
 
-    const res = await fetch(`${API_BASE_URL}/reports/filter?${params.toString()}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+      const res = await fetch(`${API_BASE_URL}/reports/filter?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-    const data = await res.json();
-    if (res.ok) setReports(data.data.data || []);
+      const data = await res.json();
+      if (res.ok) setReports(data.data.data || []);
+    } catch (err) {
+      console.error('Erreur lors du chargement des signalements :', err);
+    }
   };
 
-  useEffect(() => {
-    fetchReports();
-  }, [statusFilter]);
+  // Recharger quand on revient sur cette page
+  useFocusEffect(
+    useCallback(() => {
+      fetchReports();
+    }, [statusFilter])
+  );
 
   const handleDelete = async (id) => {
     const token = await AsyncStorage.getItem('token');
@@ -48,6 +62,12 @@ const ReportsListPage = ({ navigation }) => {
     }
   };
 
+  const openImageViewer = (images, index) => {
+    setViewerImages(images.map(img => ({ uri: img.url })));
+    setViewerIndex(index);
+    setViewerVisible(true);
+  };
+
   const renderItem = ({ item }) => (
     <View style={styles.reportCard}>
       <Text style={styles.scope}>{item.rep_sto_id ? 'Arrêt' : 'Ligne'}</Text>
@@ -60,6 +80,21 @@ const ReportsListPage = ({ navigation }) => {
       <Text style={styles.title}>{item.rep_type}</Text>
       <Text style={styles.message}>{item.rep_message}</Text>
       <Text style={styles.status}>Statut : {item.rep_status}</Text>
+
+      {item.images && item.images.length > 0 && (
+        <ScrollView horizontal style={{ marginTop: 10 }}>
+          {item.images.map((img, idx) => (
+            <TouchableOpacity key={idx} onPress={() => openImageViewer(item.images, idx)}>
+              <Image
+                source={{ uri: img.url }}
+                style={styles.thumbnail}
+                onError={(e) => console.log('Erreur image', img.url, e.nativeEvent)}
+              />
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
+
       {item.rep_status === 'envoyé' && (
         <View style={styles.actions}>
           <TouchableOpacity onPress={() => navigation.navigate('ReportEditPage', { reportId: item.rep_id })}>
@@ -99,6 +134,13 @@ const ReportsListPage = ({ navigation }) => {
         keyExtractor={(item) => item.rep_id.toString()}
         renderItem={renderItem}
         contentContainerStyle={{ paddingBottom: 100 }}
+      />
+
+      <ImageViewing
+        images={viewerImages}
+        imageIndex={viewerIndex}
+        visible={viewerVisible}
+        onRequestClose={() => setViewerVisible(false)}
       />
     </SafeAreaView>
   );
@@ -149,6 +191,14 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     gap: 12,
     marginTop: 10,
+  },
+  thumbnail: {
+    width: 80,
+    height: 80,
+    marginRight: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
   },
 });
 
