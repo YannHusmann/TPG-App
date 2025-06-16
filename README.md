@@ -19,7 +19,7 @@ TPG Signal est une application mobile créée avec **React Native et Expo** dans
 - Mode partiellement hors ligne (cache des arrêts)
 - Affichage des lignes par arrêt
 
-## ⚙Stack technique
+## Stack technique
 
 - **React Native (Expo)**
 - **TypeScript**
@@ -29,7 +29,7 @@ TPG Signal est une application mobile créée avec **React Native et Expo** dans
 - **ImagePicker**
 - **Framer Motion**, **Ionicons**
 
-## 📁 Structure du projet
+## Structure du projet
 
 ```
 TPGSignal/
@@ -56,6 +56,7 @@ TPGSignal/
 ### 2. Installation
 
 ```bash
+git clone <repo_url>
 npm install
 ```
 
